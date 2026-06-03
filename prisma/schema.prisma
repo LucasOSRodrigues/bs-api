@@ -5,9 +5,137 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  output = "../src/generated/prisma"
+  url = env("DATABASE_URL")
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  @@map("users")
+
+  user_id String @id @default(nanoid())
+  name    String
+  email   String @unique
+  password_hash String
+  avatar_url String?
+  bio String?
+  followers_count Int @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  works Work[]
+  likes Like[]
+  following Follow[] @relation("FollowRelation")
+  followers Follow[] @relation("FollowedRelation")
+  comments Comment[]
+  readProgresses ReadProgress[]
+}
+
+model Genre {
+  @@map("genres")
+
+  name     String @unique @id
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  works Work[]
+}
+
+model Work {
+  @@map("works")
+
+  work_id String @id @default(nanoid())
+  title   String @unique
+  author_id  String
+  description String?
+  cover_image_url String?
+  published_date DateTime?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  author User @relation(fields: [author_id], references: [user_id])
+  genres Genre[]
+  chapters Chapter[]
+}
+
+enum status {
+  draft
+  published
+}
+
+model Chapter {
+  @@map("chapters")
+
+  chapter_id String @id @default(nanoid())
+  work_id String
+  title String
+  content String
+  status status @default(draft)
+  published_at DateTime?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  work Work @relation(fields: [work_id], references: [work_id])
+  likes Like[]
+  comments Comment[]
+  readProgresses ReadProgress[]
+}
+
+model Follow {
+  @@map("follows")
+
+  follower_id String
+  followed_id String
+  created_at DateTime @default(now())
+
+  users User @relation("FollowRelation", fields: [follower_id], references: [user_id])
+  followed User @relation("FollowedRelation", fields: [followed_id], references: [user_id])
+  @@id([follower_id, followed_id])
+  @@index([followed_id])
+}
+
+model Like {
+  @@map("likes")
+
+  user_id String
+  chapter_id String
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [user_id])
+  chapter Chapter @relation(fields: [chapter_id], references: [chapter_id])
+  @@id([user_id, chapter_id])
+  @@index([chapter_id])
+}
+
+model Comment {
+  @@map("comments")
+
+  comment_id String @id @default(nanoid())
+  user_id String
+  chapter_id String
+  content String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  chapter Chapter @relation(fields: [chapter_id], references: [chapter_id])
+  user User @relation(fields: [user_id], references: [user_id])
+}
+
+model ReadProgress {
+  @@map("read_progresses")
+
+  user_id String
+  work_id String
+  current_chapter_id String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [user_id])
+  chapter Chapter @relation(fields: [current_chapter_id], references: [chapter_id])
+
+  @@id([user_id, work_id])
+  @@index([work_id])
 }
